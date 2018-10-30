@@ -84,6 +84,85 @@ describe("PortIn", function(){
         done(new Error("An error is expected"));
       });
     });
+    it("should send back result with error if available", function(done){
+      var inputData = {
+        billingTelephoneNumber: "5555551111",
+        subscriber: {
+          subscriberType: 'BUSINESS',
+          businessName: 'Fake Company',
+          serviceAddress: {
+            houseNumber: '123',
+            streetName: 'Main Street',
+            city: 'St. Chuck',
+            stateCode: 'MO',
+            zip: '63301',
+            county: 'USA'
+          }
+        },
+        loaAuthorizingPerson: 'Fake Person',
+        listOfPhoneNumbers: {phoneNumber: ["5555551234", "5555553333"]},
+        billingType: 'PORTIN'
+      };
+
+      var responseXml = 
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+        "<LnpOrderResponse>" +
+            "<Status>" +
+                "<Code>400</Code>" +
+                "<Description>Validation Failed. Please check your input parameters.</Description>" +
+            "</Status>" +
+            "<Errors>" +
+                "<Code>7205</Code>" +
+                "<Description>Telephone number is already being processed on another order</Description>" +
+                "<TelephoneNumbers>" +
+                    "<Tn>5555551234</Tn>" +
+                "</TelephoneNumbers>" +
+            "</Errors>" +
+            "<ProcessingStatus>EXCEPTION</ProcessingStatus>" +
+            "<LoaAuthorizingPerson>Fake Person</LoaAuthorizingPerson>" +
+            "<Subscriber>" +
+                "<SubscriberType>BUSINESS</SubscriberType>" +
+                "<BusinessName>Fake Company</BusinessName>" +
+                "<ServiceAddress>" +
+                    "<HouseNumber>123</HouseNumber>" +
+                    "<StreetName>Main Street</StreetName>" +
+                    "<City>St. Chuck</City>" +
+                    "<StateCode>MO</StateCode>" +
+                    "<Zip>63301</Zip>" +
+                    "<County>USA</County>" +
+                "</ServiceAddress>" +
+            "</Subscriber>" +
+            "<BillingTelephoneNumber>5555551111</BillingTelephoneNumber>" +
+            "<ListOfPhoneNumbers>" +
+                "<PhoneNumber>5555551234</PhoneNumber>" +
+                "<PhoneNumber>5555553333</PhoneNumber>" +
+            "</ListOfPhoneNumbers>" +
+            "<BillingType>PORTIN</BillingType>" +
+        "</LnpOrderResponse>";
+      var testNock = nock("https://api.inetwork.com").post("/v1.0/accounts/FakeAccountId/portins")
+        .reply(200, responseXml, {"Content-Type": "application/xml"})
+
+      PortIn.create(helper.createClient(), inputData,  function(err, result){
+        if(!err){
+          return done(new Error("An error is expected"));
+        }
+        try {
+          err.message.should.equal("Telephone number is already being processed on another order");
+          if (!result) {
+            return done(new Error("Expected result to not be undefined"))
+          }
+  
+          result.status.code.should.equal(400);
+          result.status.description.should.equal("Validation Failed. Please check your input parameters.");
+          result.errors.code.should.equal(7205);
+          result.errors.description.should.equal("Telephone number is already being processed on another order");
+          result.errors.telephoneNumbers.tn.should.equal("5555551234");
+          done();
+        } catch (fail) {
+          done(fail);
+        }
+      });
+    });
   });
   describe("#update", function(){
     it("should update a site", function(done){
@@ -108,6 +187,66 @@ describe("PortIn", function(){
       order.id = 1;
       order.client = helper.createClient();
       order.delete(done);
+    });
+  });
+  describe("#list", function(){ 
+    it("should return result with error if there is a result", function(done){
+      var responseXml =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+        "<LNPResponseWrapper>" +
+          "<TotalCount>1</TotalCount>" +
+          "<Links>" +
+            "<first>Link=&lt;https://test.dashboard.bandwidth.com:443/v1.0/accounts/FakeAccountId/portins?page=1&amp;size=50&amp;status=EXCEPTION&gt;;rel=\"first\";</first>" +
+          "</Links>" +
+          "<lnpPortInfoForGivenStatus>" +
+            "<accountId>FakeAccountId</accountId>" +
+            "<CountOfTNs>2</CountOfTNs>" +
+            "<userId>fakeUser</userId>" +
+            "<lastModifiedDate>2018-10-26T17:18:21.809Z</lastModifiedDate>" +
+            "<OrderDate>2018-10-26T17:18:21.553Z</OrderDate>" +
+            "<OrderId>000-000-000-000-000</OrderId>" +
+            "<OrderType>port_in</OrderType>" +
+            "<BillingTelephoneNumber>5555551234</BillingTelephoneNumber>" +
+            "<CompanyName>Fake Company</CompanyName>" +
+            "<Errors>" +
+              "<Error>" +
+                "<Code>7113</Code>" +
+                "<Description>Wireless information is required</Description>" +
+              "</Error>" +
+            "</Errors>" +
+            "<LNPLosingCarrierId>1539</LNPLosingCarrierId>" +
+            "<LNPLosingCarrierName>Test Losing Carrier N*</LNPLosingCarrierName>" +
+            "<ProcessingStatus>EXCEPTION</ProcessingStatus>" +
+            "<RequestedFOCDate>2018-10-29T17:30:00.000Z</RequestedFOCDate>" +
+            "<VendorId>49</VendorId>" +
+            "<VendorName>Bandwidth CLEC</VendorName>" +
+          "</lnpPortInfoForGivenStatus>" +
+          "</LNPResponseWrapper>";
+            
+      var testNock = nock("https://api.inetwork.com").get("/v1.0/accounts/FakeAccountId/portins?page=1&size=50&status=EXCEPTION")
+        .reply(200, responseXml, {"Content-Type": "application/xml"})
+      PortIn.list(helper.createClient(), {page: 1, size: 50, status: "EXCEPTION"},  function(err, result){
+        if(!err){
+          return done(new Error("An error is expected"));
+        }
+        try {
+          err.message.should.equal("Wireless information is required");
+          err.code.should.equal(7113);
+  
+          if (!result) {
+            return done(new Error("Expected result to not be undefined"))
+          }
+  
+          result.totalCount.should.equal(1);
+          result.lnpPortInfoForGivenStatus.accountId.should.equal("FakeAccountId");
+          result.lnpPortInfoForGivenStatus.orderId.should.equal("000-000-000-000-000");
+          result.lnpPortInfoForGivenStatus.errors.error.code.should.equal(7113);
+          result.lnpPortInfoForGivenStatus.errors.error.description.should.equal("Wireless information is required");
+          done();
+        } catch (fail) {
+          done(fail);
+        }
+      });
     });
   });
   describe("#getAreaCodes", function(){
