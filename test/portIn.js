@@ -249,6 +249,48 @@ describe("PortIn", function(){
       });
     });
   });
+  describe("#totals", function(){
+    it("should return total of all port orders", function(done){
+      var responseXml =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+        "<Quantity><Count>28</Count></Quantity>";
+      
+      var testNock = nock("https://api.inetwork.com").get("/v1.0/accounts/FakeAccountId/portins/totals")
+        .reply(200, responseXml, {"Content-Type": "application/xml"})
+      PortIn.totals(helper.createClient(),  function(err, result){
+        try {
+          if (!result) {
+            return done(new Error("Expected result to not be undefined"))
+          }
+  
+          result.count.should.equal(28);
+          done();
+        } catch (fail) {
+          done(fail);
+        }
+      });
+    });
+    it("should return total of given query", function(done){
+      var responseXml =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+        "<Quantity><Count>8</Count></Quantity>";
+      
+      var testNock = nock("https://api.inetwork.com").get("/v1.0/accounts/FakeAccountId/portins/totals?status=EXCEPTION")
+        .reply(200, responseXml, {"Content-Type": "application/xml"})
+      PortIn.totals(helper.createClient(), {status: "EXCEPTION"},  function(err, result){
+        try {
+          if (!result) {
+            return done(new Error("Expected result to not be undefined"))
+          }
+  
+          result.count.should.equal(8);
+          done();
+        } catch (fail) {
+          done(fail);
+        }
+      });
+    });
+  });
   describe("#getAreaCodes", function(){
     it("should return areaCodes", function(done){
       helper.nock().get("/v1.0/accounts/FakeAccountId/portins/1/areaCodes").reply(200, helper.xml.orderAreaCodes, {"Content-Type": "application/xml"});
