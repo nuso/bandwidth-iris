@@ -726,3 +726,23 @@ iris.TnReservation.get(id, function(err, tn){
   tn.delete(callback);
 });
 ```
+
+## CSR Order
+
+### Create CSR Order
+
+```Javascript
+var csrOrder = {
+  customerOrderId:"Your Order Id",
+  workingOrBillingTelephoneNumber:"3145551234",
+  endUserPIN:"123"
+}
+
+iris.CsrOrder.create(dlda, callback);
+```
+
+### Get CSR Order
+
+```Javascript
+iris.CsrOrder.get(id, callback);
+```
