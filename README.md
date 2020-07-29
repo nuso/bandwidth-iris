@@ -738,11 +738,17 @@ var csrOrder = {
   endUserPIN:"123"
 }
 
-iris.CsrOrder.create(dlda, callback);
+iris.CsrOrder.create(csr, callback);
 ```
 
 ### Get CSR Order
 
 ```Javascript
 iris.CsrOrder.get(id, callback);
+```
+
+### List CSR Orders
+
+```Javascript
+iris.CsrOrder.list(callback);
 ```
